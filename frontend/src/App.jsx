@@ -18,7 +18,7 @@ import Jobs from './pages/Jobs'
 
 const App = () => {
   return (
-    <div className='mx-4 sm:mx-[10%]'>
+    <div className='mx-4 sm:mx-[10%] transition-colors duration-300'>
       <ToastContainer/>
             <CursorTrail />
 
