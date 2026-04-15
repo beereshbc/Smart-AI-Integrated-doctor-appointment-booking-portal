@@ -11,6 +11,7 @@ import Appointment from './pages/Appointment'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import CursorTrail from './CursorTrail';
+import CommunityChat from './components/CommunityChat'
 import { ToastContainer, toast } from 'react-toastify';
 import Notfound from './pages/Notfound'
 import Jobs from './pages/Jobs'
@@ -37,6 +38,9 @@ const App = () => {
         <Route path='*' element={<Notfound/>}/>
       </Routes>
     <Footer/>
+
+    {/* Global Community Chat — visible on every page for logged-in patients */}
+    <CommunityChat />
     </div>
   )
 }
