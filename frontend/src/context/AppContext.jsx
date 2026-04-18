@@ -15,6 +15,33 @@ const AppContextProvider = (props) => {
     const [token, setToken] = useState(localStorage.getItem('token')?localStorage.getItem('token'):false)
     const [userData, setUserData] = useState(false)
 
+    // ── Dark Mode ──────────────────────────────────────────
+    const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true')
+
+    const toggleDarkMode = () => {
+        setDarkMode(prev => {
+            const next = !prev
+            localStorage.setItem('darkMode', String(next))
+            return next
+        })
+    }
+
+    useEffect(() => {
+        if (darkMode) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    }, [darkMode])
+
+    // Apply saved preference immediately on first mount
+    useEffect(() => {
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark')
+        }
+    }, [])
+    // ──────────────────────────────────────────────────────
+
     const getDoctorsData = async () => {
 
         try {
@@ -56,7 +83,8 @@ const AppContextProvider = (props) => {
         token, setToken,
         backendUrl,
         userData, setUserData,
-        loadUserProfileData
+        loadUserProfileData,
+        darkMode, toggleDarkMode
     }
 
     useEffect(() => {

@@ -1,5 +1,5 @@
-import React from 'react'
-import { Route, Routes } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Doctors from './pages/Doctors'
 import Login from './pages/Login'
@@ -11,18 +11,40 @@ import Appointment from './pages/Appointment'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import CursorTrail from './CursorTrail';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import Notfound from './pages/Notfound'
 import Jobs from './pages/Jobs'
+import PatientAIChat from './components/PatientAIChat'; 
+import ChatWithDoctor from './pages/ChatWithDoctor';
 
 
 const App = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const handleDragStart = (e) => {
+      const tag = e.target.tagName && e.target.tagName.toLowerCase();
+      if (tag === 'img' || tag === 'svg') {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('dragstart', handleDragStart);
+    return () => {
+      document.removeEventListener('dragstart', handleDragStart);
+    };
+  }, []);
+
+  const aiPages = ['/', '/doctors', '/about', '/contact'];
+
+  const showAIChat = aiPages.includes(location.pathname) || location.pathname.startsWith('/doctors/');
+
   return (
     <div className='mx-4 sm:mx-[10%]'>
       <ToastContainer/>
-            <CursorTrail />
-
+      <CursorTrail />
       <Navbar/>
+
       <Routes>
         <Route path='/' element={<Home/>} />
         <Route path='/doctors' element={<Doctors/>} />
@@ -34,9 +56,14 @@ const App = () => {
         <Route path='/my-appointments' element={<MyAppointments/>} />
         <Route path='/appointment/:docId' element={<Appointment/>} />
         <Route path='/jobs' element={<Jobs/>} />
+        <Route path='/chat/:appointmentId' element={<ChatWithDoctor/>} />
         <Route path='*' element={<Notfound/>}/>
       </Routes>
-    <Footer/>
+
+      {/* Conditional AI Chat */}
+      {showAIChat && <PatientAIChat />}
+
+      <Footer/>
     </div>
   )
 }
