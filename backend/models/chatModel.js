@@ -1,34 +1,15 @@
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
-const chatMessageSchema = new mongoose.Schema(
-    {
-        userId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'user',
-            required: true,
-        },
-        username: {
-            type: String,
-            required: true,
-        },
-        userImage: {
-            type: String,
-            default: '',
-        },
-        message: {
-            type: String,
-            required: true,
-            maxlength: 1000,
-        },
-    },
-    { timestamps: true }   // gives us createdAt + updatedAt automatically
-)
+const chatMessageSchema = new mongoose.Schema({
+    appointmentId: { type: String, required: true },
+    doctorId: { type: String, required: true },
+    patientId: { type: String, required: true },
+    senderType: { type: String, required: true, enum: ['doctor', 'patient'] },
+    message: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now },
+    read: { type: Boolean, default: false }
+});
 
-// Index so we can efficiently fetch recent messages sorted by time
-chatMessageSchema.index({ createdAt: -1 })
+const ChatMessageModel = mongoose.models.chatmessage || mongoose.model('chatmessage', chatMessageSchema);
 
-const chatModel =
-    mongoose.models.chatmessage ||
-    mongoose.model('chatmessage', chatMessageSchema)
-
-export default chatModel
+export default ChatMessageModel;

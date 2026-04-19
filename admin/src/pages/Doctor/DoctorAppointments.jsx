@@ -88,12 +88,12 @@ const DoctorAppointments = () => {
                   <div>
                     <span
                       className={`text-xs font-semibold px-3 py-1 rounded-full border ${
-                        item.payement
+                        item.payment
                           ? 'border-green-400 text-green-600 bg-green-50'
                           : 'border-yellow-400 text-yellow-700 bg-yellow-50'
                       }`}
                     >
-                      {item.payement ? 'Online' : 'Cash'}
+                      {item.payment ? 'Online' : 'Cash'}
                     </span>
                   </div>
 

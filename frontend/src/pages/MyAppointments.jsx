@@ -22,7 +22,7 @@ const MyAppointments = () => {
 
   const getUserAppointments = async () => {
     try {
-      setLoading(true) // ✅ Start loading
+      setLoading(true)
       const { data } = await axios.get(backendUrl + '/api/user/appointments', { headers: { token } })
       if (data.success) {
         setAppointments(data.appointments.reverse())
@@ -31,12 +31,12 @@ const MyAppointments = () => {
       console.log(error)
       toast.error(error.message)
     } finally {
-      setLoading(false) // ✅ Stop loading
+      setLoading(false)
     }
   }
 
   const cancelAppointment = async (appointmentId) => {
-    setCancelLoading(true); // ✅ Start loader
+    setCancelLoading(true);
     const startTime = Date.now();
 
     try {
@@ -47,7 +47,7 @@ const MyAppointments = () => {
       );
 
       const elapsed = Date.now() - startTime;
-      const minDuration = 100; // 0.2 seconds
+      const minDuration = 100;
       const delay = Math.max(0, minDuration - elapsed);
 
       setTimeout(() => {
@@ -78,9 +78,7 @@ const MyAppointments = () => {
       const [day, month, year] = item.slotDate.split('_');
       const appointmentStart = new Date(`${month} ${day}, ${year} ${item.slotTime}`);
 
-      // Add 30 minutes buffer to represent end time
       const appointmentEnd = new Date(appointmentStart.getTime() + 30 * 60000);
-
       const now = new Date();
       return now > appointmentEnd;
     } catch (err) {
@@ -89,48 +87,78 @@ const MyAppointments = () => {
     }
   };
 
-
   const gotoDoctor = () => {
     navigate('/')
   }
 
 
-  const initPay = (order) => {
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: order.amount,
-      currency: order.currency,
-      name: 'Appointment Payment',
-      description: 'Appointment Payment',
-      order_id: order.id,
-      receipt: order.receipt,
-      handler: async (response) => {
-        try {
-          const { data } = await axios.post(backendUrl + '/api/user/verifyRazorpay', response, { headers: { token } })
-          if (data.success) {
-            getUserAppointments()
-            navigate('/my-appointments')
-          }
-        } catch (error) {
-          toast.error(error.message)
-        }
-      }
-    }
-    const rzp = new window.Razorpay(options)
-    rzp.open()
-  }
+  // ------------------------------------------------------------
+  // ⭐⭐ SUGAMPAY INTEGRATION ⭐⭐
+  // ------------------------------------------------------------
 
-  const appointmentRazorpay = async (appointmentId) => {
+  // 1. AUTO VERIFY WHEN COMING BACK FROM SUGAMPAY
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const txnId = query.get('txnId');
+    const status = query.get('status');
+    const appointmentId = localStorage.getItem('currentAppointmentId');
+
+    if (token && status === 'success' && txnId && appointmentId) {
+      verifySugamPayment(appointmentId, txnId);
+      window.history.replaceState(null, '', window.location.pathname);
+      localStorage.removeItem('currentAppointmentId');
+    }
+  }, [token]);
+
+
+  // 2. VERIFY PAYMENT WITH BACKEND
+  const verifySugamPayment = async (appointmentId, txnId) => {
     try {
-      const { data } = await axios.post(backendUrl + '/api/user/payment-razorpay', { appointmentId }, { headers: { token } })
+      const { data } = await axios.post(
+        backendUrl + '/api/user/verify-sugam',
+        { appointmentId, txnId },
+        { headers: { token } }
+      );
+
       if (data.success) {
-        initPay(data.order)
+        toast.success(data.message);
+        getUserAppointments();
+      } else {
+        toast.error(data.message);
       }
     } catch (error) {
-      console.log(error)
-      toast.error(error.message)
+      toast.error(error.message);
     }
-  }
+  };
+
+
+  // 3. START PAYMENT — OPENS SUGAMPAY PAGE
+  const appointmentSugam = async (appointmentId) => {
+    try {
+      localStorage.setItem('currentAppointmentId', appointmentId);
+
+      const { data } = await axios.post(
+        backendUrl + '/api/user/payment-sugam',
+        { appointmentId },
+        { headers: { token } }
+      );
+
+      if (data.success) {
+        const callbackUrl = window.location.href;
+        window.location.href =
+          `http://localhost:5176/pay?orderId=${data.orderId}&callback_url=${callbackUrl}`;
+      } else {
+        toast.error(data.message);
+      }
+
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    }
+  };
+
+  // ------------------------------------------------------------
+
 
   useEffect(() => {
     if (token) getUserAppointments()
@@ -147,7 +175,6 @@ const MyAppointments = () => {
         My Appointments
       </h1>
 
-      {/* ✅ Show Loader When Loading Appointments */}
       {loading ? (
         <Loader message="Your Appointments are Loading" />
       ) : cancelLoading ? (
@@ -194,22 +221,21 @@ const MyAppointments = () => {
 
               {/* Buttons */}
               <div className="flex flex-col justify-center md:justify-center items-center md:items-start gap-3 mt-4 md:mt-0 md:ml-auto w-full md:w-auto">
-                {!item.cancelled && item.payment && !item.isCompleted && (
+
+                {item.payment && !item.cancelled && !item.isCompleted && (
                   <motion.button
-                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-green-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-300"
+                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-green-600 text-white rounded-lg shadow-sm"
                     whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.97 }}
                   >
                     Paid
                   </motion.button>
                 )}
 
-                {!item.cancelled && !item.payment && !item.isCompleted && !isAppointmentExpired(item) && (
+                {!item.payment && !item.cancelled && !item.isCompleted && !isAppointmentExpired(item) && (
                   <motion.button
-                    onClick={() => appointmentRazorpay(item._id)}
-                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-300"
+                    onClick={() => appointmentSugam(item._id)}
+                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 transition-all duration-300"
                     whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.97 }}
                   >
                     Pay Online
                   </motion.button>
@@ -218,20 +244,16 @@ const MyAppointments = () => {
                 {!item.cancelled && !item.isCompleted && !isAppointmentExpired(item) && (
                   <motion.button
                     onClick={() => cancelAppointment(item._id)}
-                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-transparent text-red-600 border border-red-300 rounded-lg hover:bg-red-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition-all duration-300"
+                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-transparent text-red-600 border border-red-300 rounded-lg hover:bg-red-600 hover:text-white transition-all duration-300"
                     whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.97 }}
                   >
                     Cancel Appointment
                   </motion.button>
                 )}
 
-                {item.cancelled && !item.isCompleted && (
+                {item.cancelled && (
                   <motion.div
-                    className="flex items-center justify-center text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-gray-100 text-red-600 border border-red-200 rounded-lg cursor-not-allowed select-none h-[44px]"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
+                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-gray-100 text-red-600 border border-red-200 rounded-lg"
                   >
                     Appointment Cancelled
                   </motion.div>
@@ -239,25 +261,28 @@ const MyAppointments = () => {
 
                 {item.isCompleted && (
                   <motion.div
-                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-300"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
+                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-green-600 text-white rounded-lg shadow-sm"
                   >
                     Appointment Completed
                   </motion.div>
                 )}
 
-                {/* Expired / No Status Available */}
                 {!item.cancelled && !item.isCompleted && isAppointmentExpired(item) && (
                   <motion.div
-                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-gray-200 text-gray-600 border border-gray-300 rounded-lg cursor-not-allowed select-none h-[44px]"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
+                    className="text-sm font-semibold text-center w-full md:min-w-48 px-4 py-2 bg-gray-200 text-gray-600 border border-gray-300 rounded-lg"
                   >
                     No Status Available (Expired)
                   </motion.div>
+                )}
+
+                {!item.cancelled && !item.isCompleted && !isAppointmentExpired(item) && (
+                  <motion.button
+                    onClick={() => navigate(`/chat/${item._id}`)}
+                    className="relative text-sm font-semibold text-center w-full md:min-w-48 px-5 py-2.5 bg-gradient-to-r from-fuchsia-500 via-purple-600 to-indigo-600 text-white rounded-lg shadow-lg transition-all duration-500"
+                    whileHover={{ scale: 1.15 }}
+                  >
+                    💬 Chat with Doctor
+                  </motion.button>
                 )}
 
               </div>

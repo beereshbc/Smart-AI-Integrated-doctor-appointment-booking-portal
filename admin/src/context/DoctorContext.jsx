@@ -117,6 +117,7 @@ const DoctorContextProvider = (props) => {
   };
 
   // ✅ Get doctor profile
+  // In your DoctorContext.jsx, make sure you have:
   const getProfileData = async () => {
     try {
       const { data } = await axios.get(`${backendUrl}/api/doctor/profile`, {
@@ -125,15 +126,18 @@ const DoctorContextProvider = (props) => {
 
       if (data.success) {
         setProfileData(data.profileData || {});
-        console.log("Profile data:", data.profileData);
+        return data.profileData;
       } else {
         toast.error(data.message);
+        throw new Error(data.message);
       }
     } catch (error) {
       console.error("getProfileData error:", error);
       toast.error(error.message);
+      throw error;
     }
   };
+
 
   const value = {
     dToken,

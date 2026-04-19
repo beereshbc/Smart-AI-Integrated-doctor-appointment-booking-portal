@@ -1,130 +1,147 @@
 import express from 'express'
 import cors from 'cors'
 import 'dotenv/config'
-import { createServer } from 'http'
-import { Server as SocketIOServer } from 'socket.io'
-import jwt from 'jsonwebtoken'
-
 import connectDB from './config/mongodb.js'
 import connectCloudinary from './config/cloudinary.js'
 import adminRouter from './routes/adminRouter.js'
 import doctorRouter from './routes/doctorRouter.js'
 import userRouter from './routes/userRoute.js'
-import chatRouter from './routes/chatRoute.js'
+import { createServer } from 'http'
+import { Server } from 'socket.io'
+import ChatMessageModel from './models/chatModel.js'
+import chatRouter from './routes/chatRouter.js'
+import aiRoutes from "./routes/aiRoutes.js";
 
-import chatModel from './models/chatModel.js'
-import userModel from './models/userModel.js'
-
-// ── App & HTTP server ─────────────────────────────────────────────────────────
+// app config
 const app = express()
-const httpServer = createServer(app)
+const server = createServer(app)
 const port = process.env.PORT || 4000
-
-// ── DB & Cloudinary ───────────────────────────────────────────────────────────
 connectDB()
 connectCloudinary()
 
-// ── Middlewares ───────────────────────────────────────────────────────────────
-app.use(express.json())
-app.use(cors())
+// Socket.io configuration
+const io = new Server(server, {
+  cors: {
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:5173",
+      process.env.ADMIN_URL || "http://localhost:5174"
+    ],
+    methods: ["GET", "POST"]
+  }
+})
 
-// ── REST API endpoints ────────────────────────────────────────────────────────
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('✅ User connected:', socket.id);
+  console.log('📊 Total connections:', io.engine.clientsCount);
+
+  // Join a specific doctor-patient chat room
+  socket.on('join_chat', (data) => {
+    const roomId = `chat_${data.doctorId}_${data.patientId}`
+    socket.join(roomId)
+    console.log(`🎯 User ${socket.id} joined room: ${roomId}`);
+    console.log('📦 Join data:', data);
+    console.log('👥 Room members:', io.sockets.adapter.rooms.get(roomId)?.size || 0);
+  })
+
+  // Handle sending messages
+  socket.on('send_message', async (data) => {
+    try {
+      console.log('📤 Message received from client:', {
+        appointmentId: data.appointmentId,
+        doctorId: data.doctorId,
+        patientId: data.patientId,
+        senderType: data.senderType,
+        message: data.message?.substring(0, 30)
+      });
+      
+      // IMPORTANT: Convert IDs to strings to ensure consistency
+      const messageData = {
+        appointmentId: String(data.appointmentId),
+        doctorId: String(data.doctorId),
+        patientId: String(data.patientId),
+        senderType: data.senderType,
+        message: data.message
+      };
+
+      console.log('💾 Saving to DB with data:', {
+        appointmentId: messageData.appointmentId,
+        doctorId: messageData.doctorId,
+        patientId: messageData.patientId,
+        senderType: messageData.senderType
+      });
+      
+      // Save message to database
+      const chatMessage = new ChatMessageModel(messageData);
+      await chatMessage.save();
+      
+      console.log('✅ Message saved to database:', {
+        _id: chatMessage._id,
+        appointmentId: chatMessage.appointmentId,
+        doctorId: chatMessage.doctorId,
+        patientId: chatMessage.patientId,
+        senderType: chatMessage.senderType
+      });
+
+      // Prepare response
+      const messageResponse = {
+        _id: chatMessage._id,
+        appointmentId: chatMessage.appointmentId,
+        doctorId: chatMessage.doctorId,
+        patientId: chatMessage.patientId,
+        senderType: chatMessage.senderType,
+        message: chatMessage.message,
+        timestamp: chatMessage.timestamp,
+        read: chatMessage.read
+      };
+
+      // Emit to specific room
+      const roomId = `chat_${data.doctorId}_${data.patientId}`;
+      const roomMembers = io.sockets.adapter.rooms.get(roomId);
+      console.log(`📨 Emitting to room: ${roomId}`);
+      console.log('👥 Room members count:', roomMembers?.size || 0);
+      
+      io.to(roomId).emit('receive_message', messageResponse);
+      console.log('✅ Message emitted successfully to room');
+
+      // Also emit back to sender as confirmation
+      socket.emit('message_sent', { 
+        success: true, 
+        messageId: chatMessage._id 
+      });
+
+    } catch (error) {
+      console.error('❌ Error saving message:', error);
+      socket.emit('message_error', { error: 'Failed to send message' });
+    }
+  })
+
+  // Handle disconnect
+  socket.on('disconnect', (reason) => {
+    console.log('❌ User disconnected:', socket.id, 'Reason:', reason);
+    console.log('📊 Remaining connections:', io.engine.clientsCount);
+  })
+})
+
+// middlewares
+// --- FIX: Increased limit to 50mb to handle images ---
+app.use(express.json({ limit: '20mb' })) 
+app.use(express.urlencoded({ limit: '20mb', extended: true }))
+app.use(cors()) // Standard CORS for REST API
+
+//api endpoints
 app.use('/api/admin', adminRouter)
 app.use('/api/doctor', doctorRouter)
 app.use('/api/user', userRouter)
 app.use('/api/chat', chatRouter)
+app.use("/api/ai", aiRoutes);
 
-app.get('/', (_req, res) => res.send('API WORKING'))
-
-// ── Socket.IO ─────────────────────────────────────────────────────────────────
-const io = new SocketIOServer(httpServer, {
-    cors: {
-        origin: '*',
-        methods: ['GET', 'POST'],
-    },
+app.get('/', (req, res) => {
+  res.send('API WORKING')
 })
 
-// Basic profanity filter
-const PROFANITY = ['fuck', 'shit', 'bitch', 'asshole', 'bastard', 'crap']
-const filterProfanity = (text) => {
-    let filtered = text
-    PROFANITY.forEach((word) => {
-        const re = new RegExp(word, 'gi')
-        filtered = filtered.replace(re, '*'.repeat(word.length))
-    })
-    return filtered
-}
+server.listen(port, () => 
+  console.log("Server Started with Socket.io on port", port)
+)
 
-// Track online users  socketId -> { userId, username }
-const onlineUsers = new Map()
-
-// ── Socket Auth Middleware ────────────────────────────────────────────────────
-io.use(async (socket, next) => {
-    try {
-        const token = socket.handshake.auth.token
-        if (!token) return next(new Error('Authentication error: No token'))
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET)
-        const user = await userModel.findById(decoded.id).lean()
-        if (!user) return next(new Error('Authentication error: User not found'))
-
-        socket.userId   = String(user._id)
-        socket.username = user.name
-        socket.userImage = user.image || ''
-        next()
-    } catch (err) {
-        next(new Error('Authentication error: ' + err.message))
-    }
-})
-
-// ── Socket Connection ─────────────────────────────────────────────────────────
-io.on('connection', (socket) => {
-    console.log(`✅ Socket connected: ${socket.username} (${socket.id})`)
-
-    onlineUsers.set(socket.id, { userId: socket.userId, username: socket.username })
-    io.emit('online_count', onlineUsers.size)
-
-    // ── Send Message ──────────────────────────────────────────────────────────
-    socket.on('send_message', async (data) => {
-        try {
-            const rawText = (data.message || '').trim()
-            if (!rawText || rawText.length > 1000) return
-
-            const cleanText = filterProfanity(rawText)
-
-            const saved = await chatModel.create({
-                userId:    socket.userId,
-                username:  socket.username,
-                userImage: socket.userImage,
-                message:   cleanText,
-            })
-
-            const payload = {
-                _id:       String(saved._id),
-                userId:    socket.userId,
-                username:  socket.username,
-                userImage: socket.userImage,
-                message:   cleanText,
-                createdAt: saved.createdAt,
-            }
-            io.emit('receive_message', payload)
-        } catch (err) {
-            console.error('send_message error:', err)
-            socket.emit('error_msg', 'Failed to send message')
-        }
-    })
-
-    // ── Typing indicators ─────────────────────────────────────────────────────
-    socket.on('typing',      () => socket.broadcast.emit('user_typing',      { username: socket.username }))
-    socket.on('stop_typing', () => socket.broadcast.emit('user_stop_typing', { username: socket.username }))
-
-    // ── Disconnect ────────────────────────────────────────────────────────────
-    socket.on('disconnect', () => {
-        onlineUsers.delete(socket.id)
-        io.emit('online_count', onlineUsers.size)
-        console.log(`❌ Socket disconnected: ${socket.username}`)
-    })
-})
-
-// ── Start server ──────────────────────────────────────────────────────────────
-httpServer.listen(port, () => console.log('Server Started on port', port))
+export { io }
