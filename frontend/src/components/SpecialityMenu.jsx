@@ -57,7 +57,7 @@ const SpecialityMenu = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: index * 0.1 }}
-            whileHover={{ scale: 1.10, y: -5 }}
+            whileHover={{ scale: 1.10, y: -5 ,transition: { duration: 0.3 }}}
           >
             <Link
               to={`/doctors/${item.speciality}`}
@@ -65,7 +65,7 @@ const SpecialityMenu = () => {
               className="flex flex-col items-center text-xs sm:text-sm text-center"
             >
               <img
-                className="w-16 sm:w-24 md:w-28 mb-2 object-contain"
+className="w-16 sm:w-24 md:w-28 mb-2 object-contain transition-all duration-700 ease-in-out hover:scale-[1.05]"
                 src={item.image}
                 alt={item.speciality}
               />

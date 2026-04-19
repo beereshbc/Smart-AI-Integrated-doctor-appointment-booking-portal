@@ -14,9 +14,8 @@ import CursorTrail from './CursorTrail';
 import { ToastContainer } from 'react-toastify';
 import Notfound from './pages/Notfound'
 import Jobs from './pages/Jobs'
-import PatientAIChat from './components/PatientAIChat'; 
 import ChatWithDoctor from './pages/ChatWithDoctor';
-
+import PatientAIChat from './components/PatientAIChat'; 
 
 const App = () => {
   const location = useLocation();

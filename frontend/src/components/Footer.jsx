@@ -26,7 +26,7 @@ const Footer = () => {
           <motion.img
             onClick={() => handleNavigate('/')}
             className="mb-6 w-44 cursor-pointer hover:opacity-90 transition-opacity duration-300"
-            src={assets.logo}
+            src={assets.logo1}
             alt="Vaidyam Logo"
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
