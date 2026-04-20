@@ -1,31 +1,31 @@
 """
 AI Doctor Recommendation Model
-Uses Sentence Transformers for semantic understanding of symptoms
+Uses TF-IDF for fast, offline semantic understanding of symptoms
 and cosine similarity for ranking specializations.
 """
 
 import json
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
 import os
 
 class DoctorRecommendationModel:
     """
     Recommends suitable doctor specializations based on user symptoms
-    using NLP embeddings and cosine similarity.
+    using TF-IDF embeddings and cosine similarity.
+    Fully offline - no model downloads needed.
     """
     
-    def __init__(self, model_name='all-MiniLM-L6-v2'):
+    def __init__(self, model_name='tfidf'):
         """
-        Initialize the model with pre-trained sentence transformers.
+        Initialize the model with TF-IDF vectorizer (offline, no downloads).
         
         Args:
-            model_name: Name of the sentence transformer model.
-                       'all-MiniLM-L6-v2' is lightweight and fast (~33M)
+            model_name: Type of model ('tfidf' is the only option, kept for compatibility)
         """
-        self.model = SentenceTransformer(model_name)
         self.specializations_data = self._load_dataset()
+        self.vectorizer = TfidfVectorizer(lowercase=True, stop_words='english')
         self.specialization_embeddings = self._generate_embeddings()
     
     def _load_dataset(self):
@@ -37,18 +37,23 @@ class DoctorRecommendationModel:
     
     def _generate_embeddings(self):
         """
-        Pre-compute embeddings for all specialization symptom sets.
+        Pre-compute TF-IDF embeddings for all specialization symptom sets.
         This improves performance when handling multiple recommendations.
         """
-        embeddings = {}
-        
+        # Collect all symptom texts for vectorization
+        symptom_texts = []
         for spec in self.specializations_data:
-            specialization = spec['specialization']
-            # Combine all symptoms into a single text for embedding
             symptoms_text = ' '.join(spec['symptoms'])
-            # Generate embedding for this specialization's symptom set
-            embedding = self.model.encode(symptoms_text, convert_to_numpy=True)
-            embeddings[specialization] = embedding
+            symptom_texts.append(symptoms_text)
+        
+        # Fit vectorizer on all symptoms and transform
+        embeddings_matrix = self.vectorizer.fit_transform(symptom_texts).toarray()
+        
+        # Store embeddings indexed by specialization name
+        embeddings = {}
+        for i, spec in enumerate(self.specializations_data):
+            specialization = spec['specialization']
+            embeddings[specialization] = embeddings_matrix[i]
         
         return embeddings
     
@@ -63,8 +68,8 @@ class DoctorRecommendationModel:
         Returns:
             List of recommendations with specialization and confidence score
         """
-        # Preprocess and encode user symptoms
-        user_embedding = self.model.encode(symptoms_text, convert_to_numpy=True)
+        # Transform user symptoms using the same vectorizer
+        user_embedding = self.vectorizer.transform([symptoms_text]).toarray()[0]
         
         # Calculate cosine similarity with each specialization
         recommendations = []
