@@ -1,0 +1,166 @@
+{
+  "specializations": [
+    {
+      "specialization": "Cardiologist",
+      "symptoms": [
+        "chest pain",
+        "heart palpitations",
+        "breathlessness",
+        "shortness of breath",
+        "irregular heartbeat",
+        "arrhythmia",
+        "high blood pressure",
+        "rapid pulse",
+        "fatigue with chest discomfort",
+        "dizziness with heart symptoms",
+        "sweating during exertion",
+        "angina"
+      ]
+    },
+    {
+      "specialization": "General Physician",
+      "symptoms": [
+        "fever",
+        "cold",
+        "cough",
+        "sore throat",
+        "headache",
+        "general malaise",
+        "body ache",
+        "fatigue",
+        "runny nose",
+        "sneezing",
+        "common cold symptoms",
+        "flu-like symptoms",
+        "mild illness"
+      ]
+    },
+    {
+      "specialization": "Dermatologist",
+      "symptoms": [
+        "skin irritation",
+        "acne",
+        "eczema",
+        "psoriasis",
+        "rash",
+        "hives",
+        "fungal infection",
+        "skin lesions",
+        "itching",
+        "dry skin",
+        "dermatitis",
+        "pimples",
+        "skin allergies"
+      ]
+    },
+    {
+      "specialization": "Orthopedist",
+      "symptoms": [
+        "joint pain",
+        "back pain",
+        "knee pain",
+        "shoulder pain",
+        "fracture",
+        "sprain",
+        "arthritis",
+        "muscle pain",
+        "bone injury",
+        "limb pain",
+        "neck pain",
+        "sports injury"
+      ]
+    },
+    {
+      "specialization": "Gastroenterologist",
+      "symptoms": [
+        "stomach pain",
+        "abdominal pain",
+        "nausea",
+        "vomiting",
+        "diarrhea",
+        "constipation",
+        "acid reflux",
+        "heartburn",
+        "indigestion",
+        "bloating",
+        "loss of appetite",
+        "gastrointestinal issues"
+      ]
+    },
+    {
+      "specialization": "Ophthalmologist",
+      "symptoms": [
+        "eye pain",
+        "blurred vision",
+        "eye redness",
+        "vision problems",
+        "dry eyes",
+        "itchy eyes",
+        "eye discharge",
+        "sensitivity to light",
+        "eye inflammation",
+        "presbyopia"
+      ]
+    },
+    {
+      "specialization": "ENT Specialist",
+      "symptoms": [
+        "ear pain",
+        "hearing loss",
+        "ear discharge",
+        "tinnitus",
+        "dizziness with ear issues",
+        "sinus infection",
+        "nasal congestion",
+        "throat pain",
+        "voice hoarseness",
+        "difficulty swallowing"
+      ]
+    },
+    {
+      "specialization": "Neurologist",
+      "symptoms": [
+        "headache",
+        "migraine",
+        "dizziness",
+        "numbness",
+        "tingling",
+        "nerve pain",
+        "seizures",
+        "tremor",
+        "memory loss",
+        "confusion",
+        "vertigo"
+      ]
+    },
+    {
+      "specialization": "Pulmonologist",
+      "symptoms": [
+        "cough",
+        "shortness of breath",
+        "chest pain while breathing",
+        "wheezing",
+        "asthma",
+        "bronchitis",
+        "lung issues",
+        "persistent cough",
+        "difficulty breathing",
+        "respiratory issues"
+      ]
+    },
+    {
+      "specialization": "Endocrinologist",
+      "symptoms": [
+        "diabetes",
+        "high blood sugar",
+        "unexplained weight loss",
+        "excessive thirst",
+        "frequent urination",
+        "fatigue and weakness",
+        "thyroid problems",
+        "hormonal imbalance",
+        "metabolic disorder"
+      ]
+    }
+  ]
+}
